@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:cache="http://www.springframework.org/schema/cache"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+    http://www.springframework.org/schema/cache
+    http://www.springframework.org/schema/cache/spring-cache.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context-4.3.xsd"
+       default-lazy-init="false">
+
+    <context:component-scan base-package="cn.com.java.redis.annother" />
+    <context:property-placeholder location="classpath:redis.properties" />
+    <!-- 配置redis的连接项-->
+    <!--<bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">-->
+        <!--&lt;!&ndash; 最大空闲数 &ndash;&gt;-->
+        <!--<property name="maxIdle" value="${redis.maxIdle}"></property>-->
+        <!--&lt;!&ndash; 最大连接数 &ndash;&gt;-->
+        <!--<property name="maxTotal" value="${redis.maxTotal}"></property>-->
+        <!--&lt;!&ndash; 最大等待时间&ndash;&gt;-->
+        <!--<property name="maxWaitMillis" value="${redis.maxWaitMillis}"></property>-->
+        <!--&lt;!&ndash; 连接超时时是否阻塞，false时报异常,ture阻塞直到超时, 默认true &ndash;&gt;-->
+        <!--<property name="blockWhenExhausted" value="${redis.blockWhenExhausted}"></property>-->
+        <!--&lt;!&ndash; 返回连接时，检测连接是否成功 &ndash;&gt;-->
+        <!--<property name="testOnBorrow" value="${redis.testOnBorrow}"></property>-->
+    <!--</bean>-->
+
+    <!-- 2.0以上的写法 -->
+    <bean id="standaloneConfiguration" class="org.springframework.data.redis.connection.RedisStandaloneConfiguration">
+        <constructor-arg name="hostName" value="${redis.host}" />
+        <constructor-arg name="port" value="${redis.port}" />
+    </bean>
+
+    <bean id="keySerializer" class="org.springframework.data.redis.serializer.StringRedisSerializer"></bean>
+    <bean id="valueSerializer" class="org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer"></bean>
+    <bean id="jedisConnectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <constructor-arg name="standaloneConfig" ref="standaloneConfiguration"></constructor-arg>
+    </bean>
+
+    <!-- 实例化RedisTemplate模板类-->
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+        <property name="keySerializer" ref="keySerializer"></property>
+        <property name="valueSerializer" ref="valueSerializer"></property>
+        <property name="hashKeySerializer" ref="keySerializer"></property>
+        <property name="hashValueSerializer" ref="valueSerializer"></property>
+        <property name="connectionFactory" ref="jedisConnectionFactory"></property>
+    </bean>
+
+    <bean id="stringRedisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate">
+        <property name="keySerializer" ref="keySerializer"></property>
+        <property name="valueSerializer" ref="valueSerializer"></property>
+        <property name="hashKeySerializer" ref="keySerializer"></property>
+        <property name="hashValueSerializer" ref="valueSerializer"></property>
+        <property name="connectionFactory" ref="jedisConnectionFactory"></property>
+    </bean>
+
+
+    <bean id="cacheManager" class="cn.com.java.redis.core.RedisCacheUtils">
+        <property name="redisTemplate" ref="redisTemplate"></property>
+        <property name="stringRedisTemplate" ref="stringRedisTemplate"></property>
+    </bean>
+
+    <bean id="redisCacheManager" class="org.springframework.data.redis.cache.RedisCacheManager" factory-method="create" c:connectionFactory-ref="jedisConnectionFactory">
+    </bean>
+
+    <bean id="redisKeyGenerator" class="cn.com.java.redis.core.RedisKeyGenerator"></bean>
+    <bean id="errorHandler" class="cn.com.java.redis.core.RedisCacheErrorHandler"></bean>
+    <!-- 启用 redis存注解-->
+    <cache:annotation-driven cache-manager="redisCacheManager" key-generator="redisKeyGenerator" error-handler="errorHandler"/>
+
+
+</beans>
